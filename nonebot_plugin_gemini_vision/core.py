@@ -15,7 +15,15 @@ os.environ["http_proxy"] = config.http_proxy
 os.environ["https_proxy"] = config.https_proxy
 os.environ["ALL_PROXY"] = config.http_proxy
 os.environ["GRPC_PROXY"] = config.http_proxy
-client = genai.Client(api_key=config.gemini_api_key)
+
+client: Optional[genai.Client] = None
+
+
+def get_client():
+    global client
+    if not client:
+        client = genai.Client(api_key=config.gemini_api_key)
+    return client
 
 
 class ConversationHistory(BaseModel):
@@ -101,6 +109,7 @@ async def chat_with_gemini(
         generate_content_config = types.GenerateContentConfig(
             response_modalities=(["Text", "Image"]),
         )
+        client = get_client()
         response = await asyncio.to_thread(
             client.models.generate_content,
             model=config.gemini_model,
