@@ -10,6 +10,7 @@ from nonebot.exception import FinishedException
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_session")
+require("nonebot_plugin_uninfo")
 from nonebot_plugin_alconna import (
     Alconna,
     Args,
