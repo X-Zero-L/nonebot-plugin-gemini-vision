@@ -73,28 +73,30 @@ help_command = on_alconna(
 )
 
 
+async def get_image_data_from_url(url: str) -> Optional[bytes]:
+    """从URL获取图片数据"""
+    try:
+        logger.info(f"获取图像数据: {url}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    logger.error(f"无法获取图片数据: {resp.status}")
+                    return None
+                return await resp.read()
+    except Exception as e:
+        logger.error(f"获取图像数据失败: {e}")
+        return None
+
+
 async def to_image_data(segment) -> Optional[bytes]:
     """从消息段中提取图片数据"""
     if segment.type == "image" and hasattr(segment, "data"):
         try:
-            # 尝试从URL获取图片数据
             if "url" in segment.data:
                 img_url = segment.data["url"]
                 logger.info(f"从URL提取图片数据: {img_url}")
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(img_url) as resp:
-                        if resp.status != 200:
-                            logger.error(f"无法获取图片数据: {resp.status}")
-                            return None
-                        return await resp.read()
+                return await get_image_data_from_url(img_url)
 
-            # 尝试从文件路径获取图片数据
-            elif "file" in segment.data:
-                file_path = segment.data["file"]
-                logger.info(f"从文件提取图片数据: {file_path}")
-                return Path(file_path).read_bytes()
-
-            # 如果有raw字段直接使用
             elif hasattr(segment, "raw") and segment.raw is not None:
                 return segment.raw
         except Exception as e:
@@ -106,13 +108,8 @@ async def to_image_data(segment) -> Optional[bytes]:
                 return segment.raw
 
             if segment.url is not None:
-                logger.info(f"从URL提取图片数据: {segment.url}")
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(segment.url) as resp:
-                        if resp.status != 200:
-                            logger.error(f"无法获取图片数据: {resp.status}")
-                            return None
-                        return await resp.read()
+                return await get_image_data_from_url(segment.url)
+
         except Exception as e:
             logger.error(f"获取AlconnaImage图像数据失败: {e}")
 
@@ -160,7 +157,7 @@ async def handle_gemini(
 ):
     user_id = str(session.id1)
     if not prompt.available or not prompt.result:
-        await gemini_command.finish(UniMessage(_help_str))
+        await gemini_command.finish(UniMessage(_help_str).reply(id=msg_id))
 
     prompt_text = prompt.result
 
