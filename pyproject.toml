@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-gemini-vision"
-version = "0.1.0"
+version = "1.0.1"
 description = "支持生成图片、编辑图片、理解图片的gemini插件"
 readme = "README.md"
 authors = [{ name = "X-Zero-L", email = "X-Zero-L@gmail.com" }]
