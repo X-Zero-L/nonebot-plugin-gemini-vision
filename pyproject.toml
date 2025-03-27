@@ -1,7 +1,7 @@
 [project]
 name = "nonebot-plugin-gemini-vision"
 version = "0.1.0"
-description = "插件描述"
+description = "支持生成图片、编辑图片、理解图片的gemini插件"
 readme = "README.md"
 authors = [{ name = "X-Zero-L", email = "X-Zero-L@gmail.com" }]
 urls = { Repository = "https://github.com/X-Zero-L/nonebot-plugin-gemini-vision" }
@@ -14,6 +14,8 @@ dependencies = [
   "nonebot-plugin-waiter>=0.8.1,<1.0.0",
   "nonebot-plugin-localstore>=0.7.4,<1.0.0",
   "nonebot-plugin-apscheduler>=0.5.0,<1.0.0",
+  "nonebot-plugin-session>=0.3.2",
+  "google-genai>=1.8.0",
 ]
 
 [dependency-groups]
