@@ -165,21 +165,20 @@ async def handle_gemini(
     prompt_text = prompt.result
 
     if prompt_text in ["清除历史", "清除对话历史", "clear", "exit"]:
-        await handle_clear_history(user_id)
-        await gemini_command.finish(UniMessage("对话历史已清除"))
+        await handle_clear_history(user_id, msg_id)
 
     image_list = await collect_images(event, ext, msg_id, bot)
     await send_processing_message(image_list, msg_id)
     await process_gemini_request(prompt_text, user_id, image_list, msg_id)
 
 
-async def handle_clear_history(user_id: str):
+async def handle_clear_history(user_id: str, msg_id: MsgId):
     """处理清除历史记录的请求"""
     success = clear_conversation_history(user_id)
     if success:
-        await gemini_command.finish(UniMessage("对话历史已清除"))
+        await gemini_command.finish(UniMessage("对话历史已清除").reply(id=msg_id))
     else:
-        await gemini_command.finish(UniMessage("没有找到对话历史"))
+        await gemini_command.finish(UniMessage("没有找到对话历史").reply(id=msg_id))
 
 
 async def collect_images(
