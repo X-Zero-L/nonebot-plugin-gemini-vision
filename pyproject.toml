@@ -1,10 +1,10 @@
 [project]
-name = "nonebot-plugin-template"
+name = "nonebot-plugin-gemini-vision"
 version = "0.1.0"
 description = "插件描述"
 readme = "README.md"
-authors = [{ name = "owner", email = "owner@gmail.com" }]
-urls = { Repository = "https://github.com/owner/nonebot-plugin-template" }
+authors = [{ name = "X-Zero-L", email = "X-Zero-L@gmail.com" }]
+urls = { Repository = "https://github.com/X-Zero-L/nonebot-plugin-gemini-vision" }
 requires-python = ">=3.10,<3.13"
 dependencies = [
   "httpx>=0.27.0,<1.0.0",
@@ -33,10 +33,10 @@ test = [
 ]
 
 [tool.nonebot]
-plugins = ["nonebot_plugin_template"]
+plugins = ["nonebot_plugin_gemini_vision"]
 
 [tool.uv.workspace]
-# members = ["nonebot_plugin_template", "tests"]
+# members = ["nonebot_plugin_gemini_vision", "tests"]
 exclude = [".docs"]
 
 [tool.pytest.ini_options]
