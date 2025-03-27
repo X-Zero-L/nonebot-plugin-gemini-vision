@@ -22,7 +22,9 @@
 </a>
 </div>
 
-> [!IMPORTANT] > **收藏项目** ～ ⭐️
+> [!IMPORTANT]
+> **收藏项目** ～⭐️
+
 
 <img width="100%" src="https://starify.komoridevs.icu/api/starify?owner=X-Zero-L&repo=nonebot-plugin-gemini-vision" alt="starify" />
 
