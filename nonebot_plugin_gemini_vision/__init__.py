@@ -93,7 +93,6 @@ async def to_image_data(segment) -> bytes | None:
         try:
             if "url" in segment.data:
                 img_url = segment.data["url"]
-                logger.info(f"从URL提取图片数据: {img_url}")
                 return await get_image_data_from_url(img_url)
 
             elif hasattr(segment, "raw") and segment.raw is not None:
