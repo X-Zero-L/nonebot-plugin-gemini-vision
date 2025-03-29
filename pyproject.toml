@@ -3,7 +3,7 @@ name = "nonebot-plugin-gemini-vision"
 version = "1.0.5"
 description = "支持生成图片、编辑图片、理解图片的gemini插件"
 readme = "README.md"
-authors = [{ name = "X-Zero-L", email = "X-Zero-L@gmail.com" }]
+authors = [{ name = "X-Zero-L", email = "zeroeeau@gmail.com" }]
 urls = { Repository = "https://github.com/X-Zero-L/nonebot-plugin-gemini-vision" }
 requires-python = ">=3.10,<3.13"
 dependencies = [
