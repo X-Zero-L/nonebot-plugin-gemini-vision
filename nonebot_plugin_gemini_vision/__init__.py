@@ -44,10 +44,10 @@ __plugin_meta__ = PluginMetadata(
     homepage="https://github.com/X-Zero-L/nonebot-plugin-gemini-vision",
     config=Config,
     supported_adapters=inherit_supported_adapters(
-        "nonebot_plugin_alconna", "nonebot_plugin_uninfo"
+        "nonebot_plugin_alconna", "nonebot_plugin_uninfo", "nonebot_plugin_session"
     ),
     # supported_adapters={"~onebot.v11"},
-    extra={"author": "X-Zero-L <your@mail.com>"},
+    extra={"author": "X-Zero-L <zeroeeau@gmail.com>"},
 )
 
 gemini_command = on_alconna(
@@ -135,15 +135,8 @@ async def send_gemini_response(response: GeminiResponse, msg_id: MsgId):
     """处理并发送Gemini的响应"""
     if not response.success:
         await gemini_command.finish(UniMessage(response.error))
-        return
 
-    msg = UniMessage()
-    if response.text:
-        msg += UniMessage(response.text)
-    if response.image:
-        msg += UniMessage.image(raw=response.image)
-
-    await gemini_command.finish(msg.reply(id=msg_id))
+    await gemini_command.finish(response.message.reply(id=msg_id))
 
 
 @gemini_command.handle()
@@ -241,7 +234,9 @@ async def process_gemini_request(
 
     except Exception as e:
         logger.error(f"处理请求出错: {e}")
-        await gemini_command.finish(UniMessage(f"处理请求时出错: {str(e)}"))
+        await gemini_command.finish(
+            UniMessage(f"处理请求时出错: {str(e)}").reply(id=msg_id)
+        )
 
 
 @help_command.handle()

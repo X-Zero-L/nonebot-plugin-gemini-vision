@@ -1,7 +1,7 @@
 import base64
 import asyncio
-import os
-from typing import Dict, Any, Optional, List
+from typing import Dict, Literal, Optional, List
+from nonebot_plugin_alconna import UniMessage
 from pydantic import BaseModel, Field
 from nonebot import get_plugin_config
 from nonebot.log import logger
@@ -11,12 +11,9 @@ from .config import Config
 import time
 
 config = get_plugin_config(Config)
-os.environ["http_proxy"] = config.http_proxy
-os.environ["https_proxy"] = config.https_proxy
-os.environ["ALL_PROXY"] = config.http_proxy
-os.environ["GRPC_PROXY"] = config.http_proxy
 
 client: Optional[genai.Client] = None
+user_lock: Dict[str, asyncio.Lock] = {}
 
 
 def get_client():
@@ -24,6 +21,13 @@ def get_client():
     if not client:
         client = genai.Client(api_key=config.gemini_api_key)
     return client
+
+
+def get_lock(user_id: str) -> asyncio.Lock:
+    """获取用户锁"""
+    if user_id not in user_lock:
+        user_lock[user_id] = asyncio.Lock()
+    return user_lock[user_id]
 
 
 class ConversationHistory(BaseModel):
@@ -35,14 +39,23 @@ class ConversationHistory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    def add_message(
+        self, role: Literal["user", "model"], message: types.ContentListUnionDict
+    ):
+        """添加消息到会话历史"""
+        self.history.append({"role": role, "parts": message})
+        self.timestamp = time.time()
+
 
 class GeminiResponse(BaseModel):
     """Gemini响应模型"""
 
     success: bool = Field(default=True)
-    text: str = Field(default="")
-    image: Optional[Any] = Field(default=None)
+    message: UniMessage = Field(default=None)
     error: Optional[str] = Field(default=None)
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 conversations: Dict[str, ConversationHistory] = {}
@@ -91,55 +104,50 @@ async def chat_with_gemini(
     """
     if not config.gemini_api_key:
         return GeminiResponse(success=False, error="未配置Gemini API密钥")
-
-    try:
-        conversation = get_conversation(user_id)
-        parts = []
-        parts.append({"text": prompt})
-        if image_list:
-            for img_data in image_list:
-                parts.append(
-                    {
-                        "inline_data": {
-                            "mime_type": "image/jpeg",
-                            "data": base64.b64encode(img_data).decode("utf-8"),
+    async with get_lock(user_id):
+        try:
+            conversation = get_conversation(user_id)
+            parts = []
+            parts.append({"text": prompt})
+            if image_list:
+                for img_data in image_list:
+                    parts.append(
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(img_data).decode("utf-8"),
+                            }
                         }
-                    }
-                )
-        generate_content_config = types.GenerateContentConfig(
-            response_modalities=(["Text", "Image"]),
-        )
-        client = get_client()
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model=config.gemini_model,
-            contents=conversation.history + [{"parts": parts, "role": "user"}],
-            config=generate_content_config,
-        )
+                    )
+            generate_content_config = types.GenerateContentConfig(
+                response_modalities=(["Text", "Image"]), top_p=0.95
+            )
+            client = get_client()
+            response = await client.aio.models.generate_content(
+                model=config.gemini_model,
+                contents=conversation.history + [{"parts": parts, "role": "user"}],
+                config=generate_content_config,
+            )
+            message = UniMessage()
+            for part in response.candidates[0].content.parts:
+                if part.text is not None:
+                    message += UniMessage(part.text)
+                if part.inline_data is not None:
+                    message += UniMessage.image(
+                        raw=part.inline_data.data,
+                        mimetype=part.inline_data.mime_type,
+                    )
+            conversation.add_message(
+                role="user",
+                message=parts,
+            )
+            conversation.add_message(
+                role="model",
+                message=response.candidates[0].content.parts,
+            )
+            conversation.timestamp = time.time()
+            return GeminiResponse(success=True, message=message)
 
-        response_text = ""
-        response_image = None
-
-        for part in response.candidates[0].content.parts:
-            if part.text is not None:
-                response_text = part.text
-            elif part.inline_data is not None:
-                response_image = part.inline_data.data
-        conversation.history.append(
-            {
-                "parts": parts,
-                "role": "user",
-            }
-        )
-        conversation.history.append(
-            {
-                "parts": response.candidates[0].content.parts,
-                "role": "model",
-            }
-        )
-        conversation.timestamp = time.time()
-        return GeminiResponse(success=True, text=response_text, image=response_image)
-
-    except Exception as e:
-        logger.error(f"Gemini对话出错: {str(e)}")
-        return GeminiResponse(success=False, error=f"对话出错: {str(e)}")
+        except Exception as e:
+            logger.error(f"Gemini对话出错: {str(e)}")
+            return GeminiResponse(success=False, error=f"对话出错: {str(e)}")

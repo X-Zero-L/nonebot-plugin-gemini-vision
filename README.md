@@ -100,8 +100,22 @@
 | :------------: | :--: | :-------------------------------------: | :-----------------------------------------: |
 | gemini_api_key |  是  |                   无                    |          Gemini API 密钥，必须提供          |
 |  gemini_model  |  否  | "gemini-2.0-flash-exp-image-generation" | Gemini 模型名称，默认使用支持图像生成的模型 |
-|   http_proxy   |  否  |                   无                    |     HTTP 代理，如需代理访问 API 请配置      |
-|  https_proxy   |  否  |                   无                    |     HTTPS 代理，如需代理访问 API 请配置     |
+
+如需要代理访问，在环境变量中设置`HTTP_PROXY`和`HTTPS_PROXY`或`ALL_PROXY`，如：
+
+```bash
+export HTTP_PROXY=localhost:7890
+export HTTPS_PROXY=localhost:7890
+export ALL_PROXY=localhost:7890
+```
+
+如使用 **Windows** 系统，设置环境变量的命令为：
+
+```bash
+set HTTP_PROXY=localhost:7890
+set HTTPS_PROXY=localhost:7890
+set ALL_PROXY=localhost:7890
+```
 
 ## 🎉 使用
 
