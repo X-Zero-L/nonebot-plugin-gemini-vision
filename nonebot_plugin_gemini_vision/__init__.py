@@ -1,32 +1,31 @@
 import aiohttp
-from typing import Optional, List
-from pathlib import Path
-
 from nonebot import get_plugin_config, require
-from nonebot.plugin import PluginMetadata, inherit_supported_adapters
+from nonebot.exception import FinishedException
 from nonebot.log import logger
 from nonebot.params import Depends
-from nonebot.exception import FinishedException
+from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_session")
 require("nonebot_plugin_uninfo")
+from arclet.alconna import AllParam
+from nonebot.adapters import Bot, Event
 from nonebot_plugin_alconna import (
     Alconna,
     Args,
-    on_alconna,
     Match,
-    UniMessage,
     MsgId,
+    UniMessage,
+    on_alconna,
+)
+from nonebot_plugin_alconna import (
     Image as AlconnaImage,
 )
-from arclet.alconna import AllParam
 from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 from nonebot_plugin_session import Session, extract_session
-from nonebot.adapters import Bot, Event
 
 from .config import Config
-from .core import chat_with_gemini, clear_conversation_history, GeminiResponse
+from .core import GeminiResponse, chat_with_gemini, clear_conversation_history
 
 config = get_plugin_config(Config)
 _help_str = """
@@ -73,7 +72,7 @@ help_command = on_alconna(
 )
 
 
-async def get_image_data_from_url(url: str) -> Optional[bytes]:
+async def get_image_data_from_url(url: str) -> bytes | None:
     """从URL获取图片数据"""
     try:
         logger.info(f"获取图像数据: {url}")
@@ -88,7 +87,7 @@ async def get_image_data_from_url(url: str) -> Optional[bytes]:
         return None
 
 
-async def to_image_data(segment) -> Optional[bytes]:
+async def to_image_data(segment) -> bytes | None:
     """从消息段中提取图片数据"""
     if segment.type == "image" and hasattr(segment, "data"):
         try:
@@ -116,9 +115,9 @@ async def to_image_data(segment) -> Optional[bytes]:
     return None
 
 
-async def extract_images_from_message(message) -> List[bytes]:
+async def extract_images_from_message(message) -> list[bytes]:
     """从消息中提取所有图片"""
-    image_list: List[bytes] = []
+    image_list: list[bytes] = []
 
     if not message:
         return image_list
@@ -171,18 +170,14 @@ async def handle_clear_history(user_id: str, msg_id: MsgId):
         await gemini_command.finish(UniMessage("没有找到对话历史").reply(id=msg_id))
 
 
-async def collect_images(
-    event: Event, ext: ReplyRecordExtension, msg_id: MsgId, bot: Bot
-) -> List[bytes]:
+async def collect_images(event: Event, ext: ReplyRecordExtension, msg_id: MsgId, bot: Bot) -> list[bytes]:
     """收集所有图片数据"""
-    image_list: List[bytes] = []
+    image_list: list[bytes] = []
 
     reply = ext.get_reply(msg_id)
     if reply:
         try:
-            uni_reply = await UniMessage.generate(
-                message=reply.msg, event=event, bot=bot
-            )
+            uni_reply = await UniMessage.generate(message=reply.msg, event=event, bot=bot)
             for segment in uni_reply:
                 if isinstance(segment, AlconnaImage):
                     img_bytes = await to_image_data(segment)
@@ -200,24 +195,20 @@ async def collect_images(
     return image_list
 
 
-async def send_processing_message(image_list: List[bytes], msg_id: MsgId):
+async def send_processing_message(image_list: list[bytes], msg_id: MsgId):
     """发送处理中的提示消息"""
     if image_list and len(image_list) > 0:
         await gemini_command.send(
-            UniMessage(
-                f"正在处理您的请求（包含 {len(image_list)} 张图片），请稍等..."
-            ).reply(id=msg_id)
+            UniMessage(f"正在处理您的请求（包含 {len(image_list)} 张图片），请稍等...").reply(id=msg_id)
         )
     else:
-        await gemini_command.send(
-            UniMessage(f"正在处理您的请求，请稍等...").reply(id=msg_id)
-        )
+        await gemini_command.send(UniMessage("正在处理您的请求，请稍等...").reply(id=msg_id))
 
 
 async def process_gemini_request(
     prompt_text: str,
     user_id: str,
-    image_list: List[bytes],
+    image_list: list[bytes],
     msg_id: MsgId,
 ):
     try:
@@ -229,14 +220,12 @@ async def process_gemini_request(
 
         await send_gemini_response(response, msg_id)
 
-    except FinishedException as e:
+    except FinishedException:
         pass
 
     except Exception as e:
         logger.error(f"处理请求出错: {e}")
-        await gemini_command.finish(
-            UniMessage(f"处理请求时出错: {str(e)}").reply(id=msg_id)
-        )
+        await gemini_command.finish(UniMessage(f"处理请求时出错: {e!s}").reply(id=msg_id))
 
 
 @help_command.handle()

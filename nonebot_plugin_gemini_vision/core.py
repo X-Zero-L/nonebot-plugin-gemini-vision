@@ -1,19 +1,21 @@
-import base64
 import asyncio
-from typing import Dict, Literal, Optional, List
-from nonebot_plugin_alconna import UniMessage
-from pydantic import BaseModel, Field
+import base64
+import time
+from typing import Literal
+
+from google import genai
+from google.genai import types
 from nonebot import get_plugin_config
 from nonebot.log import logger
-from google.genai import types
-from google import genai
+from nonebot_plugin_alconna import UniMessage
+from pydantic import BaseModel, Field
+
 from .config import Config
-import time
 
 config = get_plugin_config(Config)
 
-client: Optional[genai.Client] = None
-user_lock: Dict[str, asyncio.Lock] = {}
+client: genai.Client | None = None
+user_lock: dict[str, asyncio.Lock] = {}
 
 
 def get_client():
@@ -39,9 +41,7 @@ class ConversationHistory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def add_message(
-        self, role: Literal["user", "model"], message: types.ContentListUnionDict
-    ):
+    def add_message(self, role: Literal["user", "model"], message: types.ContentListUnionDict):
         """添加消息到会话历史"""
         self.history.append({"role": role, "parts": message})
         self.timestamp = time.time()
@@ -52,20 +52,18 @@ class GeminiResponse(BaseModel):
 
     success: bool = Field(default=True)
     message: UniMessage = Field(default=None)
-    error: Optional[str] = Field(default=None)
+    error: str | None = Field(default=None)
 
     class Config:
         arbitrary_types_allowed = True
 
 
-conversations: Dict[str, ConversationHistory] = {}
+conversations: dict[str, ConversationHistory] = {}
 
 
 def get_conversation(user_id: str) -> ConversationHistory:
     """获取或创建会话历史记录"""
-    if user_id not in conversations or (
-        conversations[user_id].timestamp + 600 < time.time()
-    ):
+    if user_id not in conversations or (conversations[user_id].timestamp + 600 < time.time()):
         conversations[user_id] = ConversationHistory()
     return conversations[user_id]
 
@@ -89,7 +87,7 @@ def clear_conversation_history(user_id: str) -> bool:
 async def chat_with_gemini(
     prompt: str,
     user_id: str,
-    image_list: Optional[List[bytes]] = None,
+    image_list: list[bytes] | None = None,
 ) -> GeminiResponse:
     """
     与Gemini进行对话
@@ -119,13 +117,11 @@ async def chat_with_gemini(
                             }
                         }
                     )
-            generate_content_config = types.GenerateContentConfig(
-                response_modalities=(["Text", "Image"]), top_p=0.95
-            )
+            generate_content_config = types.GenerateContentConfig(response_modalities=(["Text", "Image"]), top_p=0.95)
             client = get_client()
             response = await client.aio.models.generate_content(
                 model=config.gemini_model,
-                contents=conversation.history + [{"parts": parts, "role": "user"}],
+                contents=[*conversation.history, {"parts": parts, "role": "user"}],
                 config=generate_content_config,
             )
             message = UniMessage()
@@ -149,5 +145,5 @@ async def chat_with_gemini(
             return GeminiResponse(success=True, message=message)
 
         except Exception as e:
-            logger.error(f"Gemini对话出错: {str(e)}")
-            return GeminiResponse(success=False, error=f"对话出错: {str(e)}")
+            logger.error(f"Gemini对话出错: {e!s}")
+            return GeminiResponse(success=False, error=f"对话出错: {e!s}")
