@@ -1,3 +1,5 @@
+import asyncio
+
 import aiohttp
 from nonebot import get_plugin_config, require
 from nonebot.exception import FinishedException
@@ -70,6 +72,15 @@ help_command = on_alconna(
     block=True,
     aliases={"@gemini_help", "/ghelp", "gemini帮助"},
 )
+
+user_lock: dict[str, asyncio.Lock] = {}
+
+
+def get_lock(user_id: str) -> asyncio.Lock:
+    """获取用户锁"""
+    if user_id not in user_lock:
+        user_lock[user_id] = asyncio.Lock()
+    return user_lock[user_id]
 
 
 async def get_image_data_from_url(url: str) -> bytes | None:
@@ -147,17 +158,21 @@ async def handle_gemini(
     session: Session = Depends(extract_session),
 ):
     user_id = str(session.id1)
-    if not prompt.available or not prompt.result:
-        await gemini_command.finish(UniMessage(_help_str).reply(id=msg_id))
+    lock = get_lock(user_id)
+    if lock.locked():
+        await gemini_command.send(UniMessage("正在处理您的上一个请求，请稍等...").reply(id=msg_id))
+    async with lock:
+        if not prompt.available or not prompt.result:
+            await gemini_command.finish(UniMessage(_help_str).reply(id=msg_id))
 
-    prompt_text = prompt.result
+        prompt_text = prompt.result
 
-    if prompt_text in ["清除历史", "清除对话历史", "clear", "exit"]:
-        await handle_clear_history(user_id, msg_id)
+        if prompt_text in ["清除历史", "清除对话历史", "clear", "exit"]:
+            await handle_clear_history(user_id, msg_id)
 
-    image_list = await collect_images(event, ext, msg_id, bot)
-    await send_processing_message(image_list, msg_id)
-    await process_gemini_request(prompt_text, user_id, image_list, msg_id)
+        image_list = await collect_images(event, ext, msg_id, bot)
+        await send_processing_message(image_list, msg_id)
+        await process_gemini_request(prompt_text, user_id, image_list, msg_id)
 
 
 async def handle_clear_history(user_id: str, msg_id: MsgId):
