@@ -32,9 +32,12 @@ from .core import GeminiResponse, chat_with_gemini, clear_conversation_history
 config = get_plugin_config(Config)
 _help_str = """
 Gemini Vision 帮助
-/gemini <问题> - 与Gemini聊天，可包含以下特殊指令：
-- 回复图片 + 问题：分析图片内容（支持多图）、编辑图片
-- "清除历史"：清除对话历史记录
+/gemini <问题> [图片列表] - 提交问题和图片，支持编辑/生成/理解图片，同时支持回复某消息，获取消息内的图片进行对话
+例如：
+/gemini 把皮卡丘的耳朵和腮红去掉 [某黄色生物图片]
+回复某消息+/gemini 把头发染成绿的
+支持上下文对话，当你上文已经提交了图片后，可以像这样: /gemini 改成紫色
+也支持清空当前上下文：/gemini exit
 /gemini_help - 查看帮助信息
 """.strip()
 __plugin_meta__ = PluginMetadata(
