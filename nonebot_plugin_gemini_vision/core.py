@@ -75,7 +75,12 @@ def clear_conversation_history(user_id: str) -> bool:
     return False
 
 
-def build_contents(conversation: ConversationHistory, user_id: str, prompt: str, image_list: list[bytes] | None = None) -> types.ContentListUnionDict:
+def build_contents(
+    conversation: ConversationHistory,
+    user_id: str,
+    prompt: str,
+    image_list: list[bytes] | None = None,
+) -> types.ContentListUnionDict:
     """
     构建发送给Gemini的内容
 
