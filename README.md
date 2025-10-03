@@ -22,9 +22,7 @@
 </a>
 </div>
 
-> [!IMPORTANT]
-> **收藏项目** ～⭐️
-
+> [!IMPORTANT] > **收藏项目** ～ ⭐️
 
 <img width="100%" src="https://starify.komoridevs.icu/api/starify?owner=X-Zero-L&repo=nonebot-plugin-gemini-vision" alt="starify" />
 
@@ -96,10 +94,11 @@
 
 在 nonebot2 项目的`.env`文件中添加下表中的必填配置
 
-|     配置项     | 必填 |                 默认值                  |                    说明                     |
-| :------------: | :--: | :-------------------------------------: | :-----------------------------------------: |
-| gemini_api_key |  是  |                   无                    |          Gemini API 密钥，必须提供          |
-|  gemini_model  |  否  | "gemini-2.0-flash-exp-image-generation" | Gemini 模型名称，默认使用支持图像生成的模型 |
+|     配置项     | 必填 |              默认值              |                    说明                     |
+| :------------: | :--: | :------------------------------: | :-----------------------------------------: |
+| gemini_api_key |  是  |                无                |          Gemini API 密钥，必须提供          |
+|  gemini_model  |  否  | "gemini-2.5-flash-image-preview" | Gemini 模型名称，默认使用支持图像生成的模型 |
+| gemini_preset  |  否  |                ""                |      系统预设提示词，用于设置 AI 角色       |
 
 如需要代理访问，在环境变量中设置`HTTP_PROXY`和`HTTPS_PROXY`或`ALL_PROXY`，如：
 

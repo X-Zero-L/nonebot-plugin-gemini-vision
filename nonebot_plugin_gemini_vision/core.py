@@ -75,6 +75,38 @@ def clear_conversation_history(user_id: str) -> bool:
     return False
 
 
+def build_contents(conversation: ConversationHistory, user_id: str, prompt: str, image_list: list[bytes] | None = None) -> types.ContentListUnionDict:
+    """
+    构建发送给Gemini的内容
+
+    Args:
+        conversation: 会话历史记录对象
+        user_id: 用户ID
+        prompt: 用户提问
+        image_list: 可选的多张图片数据列表
+
+    Returns:
+        types.ContentListUnionDict: 构建好的内容列表
+    """
+    contents = []
+    if getattr(config, "gemini_preset", ""):
+        contents.append({"role": "system", "parts": [{"text": config.gemini_preset}]})
+    contents.extend(conversation.history)
+    parts = [{"text": prompt}]
+    if image_list:
+        for img_data in image_list:
+            parts.append(
+                {
+                    "inline_data": {
+                        "mime_type": "image/jpeg",
+                        "data": base64.b64encode(img_data).decode("utf-8"),
+                    }
+                }
+            )
+    contents.append({"role": "user", "parts": parts})
+    return contents
+
+
 async def chat_with_gemini(
     prompt: str,
     user_id: str,
@@ -95,23 +127,11 @@ async def chat_with_gemini(
         return GeminiResponse(success=False, error="未配置Gemini API密钥")
     try:
         conversation = get_conversation(user_id)
-        parts = []
-        parts.append({"text": prompt})
-        if image_list:
-            for img_data in image_list:
-                parts.append(
-                    {
-                        "inline_data": {
-                            "mime_type": "image/jpeg",
-                            "data": base64.b64encode(img_data).decode("utf-8"),
-                        }
-                    }
-                )
         generate_content_config = types.GenerateContentConfig(response_modalities=(["Text", "Image"]), top_p=0.95)
         client = get_client()
         response = await client.aio.models.generate_content(
             model=config.gemini_model,
-            contents=[*conversation.history, {"parts": parts, "role": "user"}],
+            contents=build_contents(conversation, user_id, prompt, image_list),
             config=generate_content_config,
         )
         message = UniMessage()
@@ -123,9 +143,11 @@ async def chat_with_gemini(
                     raw=part.inline_data.data,
                     mimetype=part.inline_data.mime_type,
                 )
+        # Extract parts from the last user message in built contents
+        user_parts = build_contents(conversation, user_id, prompt, image_list)[-1]["parts"]
         conversation.add_message(
             role="user",
-            message=parts,
+            message=user_parts,
         )
         conversation.add_message(
             role="model",
